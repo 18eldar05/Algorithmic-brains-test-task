@@ -8,9 +8,7 @@ from .tasks import execution
 
 
 class TaskAPIView(APIView):
-    def get(self, request, *args, **kwargs):
-        pk = kwargs.get("pk", None)
-
+    def get(self, request, pk, *args, **kwargs):
         try:
             instance = Task.objects.get(pk=pk)
         except Task.DoesNotExist:
