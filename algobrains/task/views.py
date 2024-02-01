@@ -21,7 +21,6 @@ class TaskAPIView(APIView):
         }, status=200)
 
     def post(self, request):
-        print("Hooray! My msg")
         data = JSONParser().parse(request)
         serializer = TaskSerializerPost(data=data)
         serializer.is_valid(raise_exception=True)
