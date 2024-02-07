@@ -1,35 +1,39 @@
+import json
 import time
 import httpx
-from django.http import Http404
-from .models import Task
+from .models import *
+import logging
+
+logging.basicConfig(level=logging.INFO, filename="py_log.log", filemode="a",
+                    format="%(asctime)s %(levelname)s %(message)s")
+
+logging.info("Start of service.py")
 
 
-def request(pk):
+def make_httpx_request(pk):
+    logging.info("!!!make_httpx_request!!!")
     try:
         instance = Task.objects.get(pk=pk)
-    except Task.DoesNotExist:
-        raise Http404("No Task found!")
+    except Task.DoesNotExist as err:
+        logging.error("No Task found:", err)
 
     instance.status = "in_process"
     instance.save()
-
-    time.sleep(8)
+    time.sleep(3)
 
     method = instance.method
     url = instance.url
-    headers = eval(instance.headers_from_client)
+    headers = json.loads(instance.headers_from_client)
+    body = json.loads(instance.body_from_client)
 
-    if method == "GET":
-        response = httpx.get(url, headers=headers)
-    elif method == "POST":
-        response = httpx.post(url, json=headers)
-    else:
-        instance.status = "error"
-        instance.save()
-        raise Exception("Error: unknown method")
+    response = httpx.request(method, url, headers=headers, json=body)
 
     instance.http_status_code = response.status_code
-    instance.headers_from_service = response.headers
+    resp_body = response.json()
+    instance.body_from_service = json.dumps(resp_body)
     instance.length = response.headers.get('content-length', 0)
-    instance.status = "done"
+    if response.is_error:
+        instance.status = "error"
+    else:
+        instance.status = "done"
     instance.save()

@@ -1,16 +1,16 @@
 from django.http import Http404
-from rest_framework.parsers import JSONParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Task
+from .models import *
 from .serializers import TaskSerializerPost, TaskSerializerGet
 from .tasks import execution
 
 
 class TaskAPIView(APIView):
-    def get(self, request, *args, **kwargs):
-        pk = kwargs.get("pk", None)
+    # permission_classes = [IsAuthenticated]
 
+    def get(self, request, pk, *args, **kwargs):
         try:
             instance = Task.objects.get(pk=pk)
         except Task.DoesNotExist:
@@ -21,10 +21,9 @@ class TaskAPIView(APIView):
         }, status=200)
 
     def post(self, request):
-        data = JSONParser().parse(request)
-        serializer = TaskSerializerPost(data=data)
+        serializer = TaskSerializerPost(data=request.data)
         serializer.is_valid(raise_exception=True)
-        instance = serializer.save()
+        instance = serializer.create(serializer.validated_data)
 
         execution.delay(instance.pk)
 
